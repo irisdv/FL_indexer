@@ -1,7 +1,17 @@
 # Apibara configuration file
 # This file is mounted in the docker-compose container.
+
 [admin.storage]
 connection_string = "mongodb://apibara:apibara@mongo:27017"
+
 [network.starknet-goerli]
 type = "starknet"
 provider_url = "https://starknet-goerli.apibara.com/"
+
+[server]
+port = 8082
+docker = true
+
+[contract]
+map_address = "0x052c936c5624517d671a6378ab0ede31e4c6d4584357ebb432bb1313af93599c"
+frenslands_address = "0x060363b467a2b8d409234315babe6be180020e0bb65d708c0d09be6fd3691a2f"

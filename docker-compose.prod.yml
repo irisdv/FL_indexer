@@ -12,19 +12,6 @@ services:
     volumes:
     - ./_docker/apibara_mongodb:/data/db
 
-  apibara:
-    image: apibara/apibara:0.3.2
-    restart: always
-    command: start --config /usr/etc/apibara/configuration.toml
-    environment:
-      RUST_LOG: "apibara=info"
-    ports:
-    - 7171:7171
-    volumes:
-    - ./configuration.toml:/usr/etc/apibara/configuration.toml
-    links:
-    - mongo
-
   indexer:
     build:
       context: .
@@ -32,12 +19,21 @@ services:
     restart: always
     command:
     - start
-    - --server-url
-    - apibara:7171
     - --mongo-url
     - "mongodb://apibara:apibara@mongo:27017"
     environment:
       PYTHONUNBUFFERED: "1"
     links:
-    - mongo
-    - apibara
+      - mongo
+  
+  nginx:
+    image: valian/docker-nginx-auto-ssl
+    restart: on-failure
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ssl_data:/etc/resty-auto-ssl
+    environment:
+      ALLOWED_DOMAINS: 'goerli.indexer.frenslands.xyz'
+      SITES: 'goerli.indexer.frenslands.xyz=indexer:8082'
