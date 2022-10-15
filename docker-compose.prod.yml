@@ -21,21 +21,7 @@ services:
     - start
     - --mongo-url
     - "mongodb://apibara:apibara@mongo:27017"
-    volumes:
-      - ./_docker/frenslands-indexer:/indexer/data
     environment:
       PYTHONUNBUFFERED: "1"
     links:
-      - mongo
-  
-  nginx:
-    image: valian/docker-nginx-auto-ssl
-    restart: on-failure
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ./ssl-data:/etc/resty-auto-ssl
-    environment:
-      ALLOWED_DOMAINS: 'goerli.indexer.frenslands.xyz'
-      SITES: 'goerli.indexer.frenslands.xyz=indexer:8082'
+    - mongo
