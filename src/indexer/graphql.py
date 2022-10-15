@@ -138,7 +138,7 @@ class IndexerGraphQLView(GraphQLView):
 
 async def run_graphql_api(mongo_url=None):
     if mongo_url is None:
-        mongo_url = "mongodb://apibara:apibara@localhost:27018"
+        mongo_url = "mongodb://apibara:apibara@localhost:27017"
 
     mongo = MongoClient(mongo_url)
     db_name = indexer_id.replace("-", "_")
@@ -164,7 +164,8 @@ async def run_graphql_api(mongo_url=None):
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", "8080")
+    # site = web.TCPSite(runner, "localhost", "8080")
+    site = web.TCPSite(runner, port=8082).start()
     await site.start()
 
     print(f"GraphQL server started on port 8080")
