@@ -25,3 +25,17 @@ services:
       PYTHONUNBUFFERED: "1"
     links:
     - mongo
+
+  graphql:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    command:
+    - graphql
+    - --mongo-url
+    - "mongodb://apibara:apibara@mongo:27017"
+    environment:
+      PYTHONUNBUFFERED: "1"
+    links:
+    - mongo
