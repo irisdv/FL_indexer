@@ -164,7 +164,7 @@ async def run_graphql_api(mongo_url=None):
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", "8082")
+    site = web.TCPSite(runner, port="8082")
     print(site)
     await site.start()
 
