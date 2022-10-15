@@ -164,12 +164,9 @@ async def run_graphql_api(mongo_url=None):
 
     runner = web.AppRunner(app)
     await runner.setup()
-    # site = web.TCPSite(runner, "localhost", "8080")
-    # site = web.TCPSite(runner, "goerli.indexer.frenslands.xyz", "8082")
-    site = web.TCPSite(runner, port=8082)
-    await site.start()
+    await web.TCPSite(runner, port="8082").start()
 
-    print(f"GraphQL server started on port 8080")
+    print(f"GraphQL server started on port 8082")
 
     while True:
         await asyncio.sleep(5_000)
