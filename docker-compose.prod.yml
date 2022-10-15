@@ -50,7 +50,7 @@ services:
       - ssl_data:/etc/resty-auto-ssl
     environment:
       ALLOWED_DOMAINS: 'goerli.indexer.frenslands.xyz'
-      SITES: 'goerli.indexer.frenslands.xyz=indexer:8082'
+      SITES: 'goerli.indexer.frenslands.xyz=graphql:8082'
 
 volumes:
   ssl_data:
