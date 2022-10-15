@@ -39,3 +39,18 @@ services:
       PYTHONUNBUFFERED: "1"
     links:
     - mongo
+
+  nginx:
+    image: valian/docker-nginx-auto-ssl
+    restart: on-failure
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ssl_data:/etc/resty-auto-ssl
+    environment:
+      ALLOWED_DOMAINS: 'goerli.indexer.starknet.id'
+      SITES: 'goerli.indexer.starknet.id=indexer:8082'
+
+volumes:
+  ssl_data:
