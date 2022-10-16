@@ -8,9 +8,9 @@ services:
       MONGO_INITDB_ROOT_USERNAME: apibara
       MONGO_INITDB_ROOT_PASSWORD: apibara
     ports:
-    - 27017:27017
+      - "27017:27017"
     volumes:
-    - ./_docker/apibara_mongodb:/data/db
+      - ./_docker/apibara_mongodb:/data/db
 
   indexer:
     build:
@@ -18,39 +18,45 @@ services:
       dockerfile: Dockerfile
     restart: always
     command:
-    - start
-    - --mongo-url
-    - "mongodb://apibara:apibara@mongo:27017"
+      - start
+      - --mongo-url
+      - "mongodb://apibara:apibara@mongo:27017"
     environment:
       PYTHONUNBUFFERED: "1"
     links:
-    - mongo
+      - mongo
 
   graphql:
     build:
       context: .
       dockerfile: Dockerfile
     restart: always
+    ports:
+      - "8080:8080"
     command:
-    - graphql
-    - --mongo-url
-    - "mongodb://apibara:apibara@mongo:27017"
+      - graphql
+      - --mongo-url
+      - "mongodb://apibara:apibara@mongo:27017"
     environment:
       PYTHONUNBUFFERED: "1"
     links:
-    - mongo
+      - mongo
 
   nginx:
     image: valian/docker-nginx-auto-ssl
     restart: on-failure
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
     volumes:
       - ssl_data:/etc/resty-auto-ssl
     environment:
       ALLOWED_DOMAINS: 'goerli.indexer.frenslands.xyz'
       SITES: 'goerli.indexer.frenslands.xyz=graphql:8082'
 
+networks:
+  default:
+    external:
+      name: fl_network
 volumes:
   ssl_data:
