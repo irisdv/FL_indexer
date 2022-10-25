@@ -6,72 +6,23 @@ from datetime import datetime
 
 from apibara import IndexerRunner, Info, NewBlock, NewEvents
 from apibara.indexer.runner import IndexerRunnerConfiguration
-from apibara.model import EventFilter
+from apibara.model import EventFilter, BlockHeader, StarkNetEvent
 from pymongo import MongoClient
-
 from starknet_py.contract import FunctionCallSerializer, identifier_manager_from_abi
+
+from indexer.events.transfers import handle_transfer_events
+from indexer.events.init import handle_init_events, handle_reset_events
+from indexer.events.harvest import handle_harvest_events
+from indexer.events.destroy import handle_destroy_events
+from indexer.events.build import handle_build_events
+from indexer.events.repair import handle_repair_events
+from indexer.events.move import handle_move_events
+from indexer.events.fuel import handle_fuel_events
+from indexer.events.claim import handle_claim_events
 
 indexer_id = "indexer-transfer"
 map_address = "0x052c936c5624517d671a6378ab0ede31e4c6d4584357ebb432bb1313af93599c"
-frenslands_address = "0x060363b467a2b8d409234315babe6be180020e0bb65d708c0d09be6fd3691a2f"
-
-uint256_abi = {
-    "name": "Uint256",
-    "type": "struct",
-    "size": 2,
-    "members": [
-        {"name": "low", "offset": 0, "type": "felt"},
-        {"name": "high", "offset": 1, "type": "felt"},
-    ],
-}
-
-transfer_abi = {
-    "name": "Transfer",
-    "type": "event",
-    "keys": [],
-    "outputs": [
-        {"name": "from_address", "type": "felt"},
-        {"name": "to_address", "type": "felt"},
-        {"name": "token_id", "type": "Uint256"},
-    ],
-}
-transfer_decoder = FunctionCallSerializer(
-    abi=transfer_abi,
-    identifier_manager=identifier_manager_from_abi([transfer_abi, uint256_abi]),
-)
-
-# New Game init events
-newGame_abi = {
-    "name": "NewGame",
-    "type": "event",
-    "keys": [],
-    "outputs": [
-      { "name": "owner", "type": "felt" },
-      { "name": "land_id", "type": "felt" },
-      { "name": "biome_id", "type": "felt" },
-      { "name": "time", "type": "felt" }
-    ],
-}
-newGame_decoder = FunctionCallSerializer(
-    abi=newGame_abi,
-    identifier_manager=identifier_manager_from_abi([newGame_abi, uint256_abi]),
-)
-
-
-def decode_transfer_event(data: List[bytes]) -> NamedTuple:
-    data = [int.from_bytes(b, "big") for b in data]
-    return transfer_decoder.to_python(data)
-
-def decode_new_game_event(data: List[bytes]) -> NamedTuple:
-    data = [int.from_bytes(b, "big") for b in data]
-    return newGame_decoder.to_python(data)
-
-def encode_int_as_bytes(n: int) -> bytes:
-    """Encode an integer to bytes so that it can be stored in a db."""
-    data = n.to_bytes(32, "big")
-    print(data)
-    return n.to_bytes(32, "big")
-
+frenslands_address = "0x0274f30014f7456d36b82728eb655f23dfe9ef0b7e0c6ca827052ab2d01a5d65"
 
 async def handle_events(info: Info, block_events: NewEvents):
     """Handle a group of events grouped by block."""
@@ -83,73 +34,25 @@ async def handle_events(info: Info, block_events: NewEvents):
     for ev in block_events.events:
         print(ev.name, ev.transaction_hash.hex())
         if ev.name == "Transfer":
-            print("Transfer event")
-
-            transfers = [
-                {
-                    "event": decode_transfer_event(ev.data),
-                    "transaction_hash": ev.transaction_hash,
-                }
-                # for event in block_events.events
-            ]
-            print("    Transfers decoded.")
-
-            transfers_docs = [
-                {
-                    "from_address": encode_int_as_bytes(tr["event"].from_address),
-                    "to_address": encode_int_as_bytes(tr["event"].to_address),
-                    "token_id": encode_int_as_bytes(tr["event"].token_id),
-                    "transaction_hash": tr["transaction_hash"],
-                    "timestamp": block_time,
-                }
-                for tr in transfers
-            ]
-
-            # Now store to the database.
-            await info.storage.insert_many("transfers", transfers_docs)
-            print("    Transfers stored.")
-
-            new_token_owner = dict()
-            for transfer in transfers:
-                new_token_owner[transfer["event"].token_id] = transfer["event"].to_address
-
-            for token_id, new_owner in new_token_owner.items():
-                token_id = encode_int_as_bytes(token_id)
-                # Use upsert to store the token if it's the first
-                # time indexing it.
-                await info.storage.find_one_and_replace(
-                    "tokens",
-                    {"token_id": token_id},
-                    {
-                        "token_id": token_id,
-                        "owner": encode_int_as_bytes(new_owner),
-                        "updated_at": block_time,
-                    },
-                    upsert=True,
-                )
-            print("    Owners updated.")
-
+            await handle_transfer_events(info, block_events.block, ev)
         elif ev.name == "NewGame":
-            print("NewGame event")
-            inits = [
-                {
-                    "event": decode_new_game_event(ev.data),
-                    "transaction_hash": ev.transaction_hash,
-                }
-            ]
-            print("    Inits decoded.")
-            init_docs = [
-                {
-                    "owner": encode_int_as_bytes(tr["event"].owner),
-                    "land_id": encode_int_as_bytes(tr["event"].land_id),
-                    "biome_id": encode_int_as_bytes(tr["event"].biome_id),
-                    "transaction_hash": tr["transaction_hash"],
-                    "timestamp": block_time,
-                }
-                for tr in inits
-            ]
-            await info.storage.insert_many("inits", init_docs)
-            print("    Inits stored.")
+            await handle_init_events(info, block_events.block, ev)
+        elif ev.name == "HarvestResource":
+            await handle_harvest_events(info, block_events.block, ev)
+        elif ev.name == "Destroy":
+            await handle_destroy_events(info, block_events.block, ev)
+        elif ev.name == "Build":
+            await handle_build_events(info, block_events.block, ev)
+        elif ev.name == "Repair":
+            await handle_repair_events(info, block_events.block, ev)
+        elif ev.name == "Move":
+            await handle_move_events(info, block_events.block, ev)
+        elif ev.name == "FuelProduction":
+            await handle_fuel_events(info, block_events.block, ev)
+        elif ev.name == "Claim":
+            await handle_claim_events(info, block_events.block, ev)
+        elif ev.name == "ResetGame":
+            await handle_reset_events(info, block_events.block, ev)
 
 
 async def handle_block(info: Info, block: NewBlock):
@@ -191,10 +94,33 @@ async def run_indexer(server_url=None, mongo_url=None, restart=None):
             EventFilter.from_event_name(
                 name="NewGame", address=frenslands_address
             ),
+            EventFilter.from_event_name(
+                name="HarvestResource", address=frenslands_address
+            ),
+            EventFilter.from_event_name(
+                name="Destroy", address=frenslands_address
+            ),
+            EventFilter.from_event_name(
+                name="Build", address=frenslands_address
+            ),
+            EventFilter.from_event_name(
+                name="Repair", address=frenslands_address
+            ),
+            EventFilter.from_event_name(
+                name="Move", address=frenslands_address
+            ),
+            EventFilter.from_event_name(
+                name="FuelProduction", address=frenslands_address
+            ),
+            EventFilter.from_event_name(
+                name="Claim", address=frenslands_address
+            ),
+            EventFilter.from_event_name(
+                name="ResetGame", address=frenslands_address
+            ),
         ],
         index_from_block=300_000,
     )
-
     print("Initialization completed. Entering main loop.")
 
     await runner.run()

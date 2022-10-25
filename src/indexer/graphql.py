@@ -99,7 +99,6 @@ def get_tokens(
 class GameInit:
     owner: HexValue
     land_id: HexValue
-    biome_id: HexValue
     timestamp: datetime
 
     @classmethod
@@ -107,7 +106,6 @@ class GameInit:
         return cls(
             owner=data["owner"],
             land_id=data["land_id"],
-            biome_id=data["biome_id"],
             timestamp=data["timestamp"],
         )
 
@@ -120,12 +118,414 @@ def get_init_by_id(info, id: HexValue) -> Optional[GameInit]:
         return GameInit.from_mongo(init)
     return None
 
+# ------- Harvest Event ------
+
+@strawberry.type
+class HarvestResource:
+    owner: HexValue
+    land_id: HexValue
+    resource_type: HexValue
+    resource_uid: HexValue
+    block_comp: HexValue
+    pos_x: HexValue
+    pos_y: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            resource_type=data["resource_type"],
+            resource_uid=data["resource_uid"],
+            block_comp=data["block_comp"],
+            pos_x=data["pos_x"],
+            pos_y=data["pos_y"],
+            timestamp=data["timestamp"],
+        )
+
+# returns event for a given tokenId
+def get_harvest_by_id(info, land_id: Optional[HexValue] = None, limit: int = 10) -> List[HarvestResource]:
+    db = info.context["db"]
+
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+
+    query = db["harvest"].find(filter).limit(limit).sort("updated_at", -1)
+
+    return [HarvestResource.from_mongo(t) for t in query]
+
+# Returns a list of tokns, optionally filtered by their owners
+# skip and limit used for pagination
+def get_harvest_array(
+    info, owner: Optional[HexValue] = None, land_id: Optional[HexValue] = None, limit: int = 10, skip: int = 0
+) -> List[HarvestResource]:
+    db = info.context["db"]
+
+    filter = {"_chain.valid_to": None}
+    if owner is not None:
+        filter["owner"] = owner
+    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    
+    query = db["harvest"].find(filter).skip(skip).limit(limit).sort("updated_at", -1)
+
+    return [HarvestResource.from_mongo(t) for t in query]
+
+# returns harvest events for a given land_id with timestamp of tx greater than time
+def get_harvest_by_id_time(info, id: HexValue, time: datetime) -> Optional[HarvestResource]:
+    db = info.context["db"]
+    harvest = db["harvest"].find_one({"land_id": id, "_chain.valid_to": None, "timestamp": {"$gt": time}})
+
+    if harvest is not None:
+        return HarvestResource.from_mongo(harvest)
+    return None
+
+# ------- End Harvest Event ------
+
+# ------- Build Event ------
+
+@strawberry.type
+class Build:
+    owner: HexValue
+    land_id: HexValue
+    time: HexValue
+    building_type_id: HexValue
+    building_uid: HexValue
+    block_comp: HexValue
+    pos_x: HexValue
+    pos_y: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            time=data["time"],
+            building_type_id=data["building_type_id"],
+            building_uid=data["building_uid"],
+            block_comp=data["block_comp"],
+            pos_x=data["pos_x"],
+            pos_y=data["pos_y"],
+            timestamp=data["timestamp"],
+        )
+
+# returns builds event for a given tokenId
+def get_build_by_id(info, land_id: HexValue, skip: int = 0) -> List[Build]:
+    db = info.context["db"]
+
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    
+    query = db["build"].find(filter).skip(skip).sort("updated_at", -1)
+
+    return [Build.from_mongo(t) for t in query]
+
+# returns build events for a given land_id with timestamp of tx greater than time
+def get_build_by_id_time(info, id: HexValue, time: datetime) -> Optional[Build]:
+    db = info.context["db"]
+    build = db["build"].find_one({"land_id": id, "_chain.valid_to": None, "timestamp": {"$gt": time}})
+
+    if build is not None:
+        return Build.from_mongo(build)
+    return None
+
+# returns build events for a given land_id with block equals to block
+def get_build_by_id_block(info, land_id: HexValue, block: HexValue) -> List[Build]:
+    db = info.context["db"]
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    if block is not None:
+        filter['time'] = block
+
+    query = db["build"].find(filter).sort("updated_at", -1)
+
+    return [Build.from_mongo(t) for t in query]
+
+# ------- FuelProduction Event ------
+@strawberry.type
+class FuelProduction:
+    owner: HexValue
+    land_id: HexValue
+    time: HexValue
+    building_type_id: HexValue
+    building_uid: HexValue
+    pos_x: HexValue
+    pos_y: HexValue
+    nb_blocks: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            time=data["time"],
+            building_type_id=data["building_type_id"],
+            building_uid=data["building_uid"],
+            pos_x=data["pos_x"],
+            pos_y=data["pos_y"],
+            nb_blocks=data["nb_blocks"],
+            timestamp=data["timestamp"],
+        )
+
+# returns fuelProduction event for a given tokenId
+def get_fuel_by_id(info, land_id: HexValue, skip: int = 0) -> List[FuelProduction]:
+    db = info.context["db"]
+    
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    
+    query = db["fuel"].find(filter).skip(skip).sort("updated_at", -1)
+
+    return [FuelProduction.from_mongo(t) for t in query]
+
+# returns fuelProduction events for a given land_id with timestamp of tx greater than time
+def get_fuel_by_id_time(info, id: HexValue, time: datetime) -> Optional[FuelProduction]:
+    db = info.context["db"]
+    fuel = db["fuel"].find_one({"land_id": id, "_chain.valid_to": None, "timestamp": {"$gt": time}})
+
+    if fuel is not None:
+        return FuelProduction.from_mongo(fuel)
+    return None
+
+# returns fuelProduction events for a given land_id with block equals to block
+def get_fuel_by_id_block(info, id: HexValue, block: HexValue) -> Optional[FuelProduction]:
+    db = info.context["db"]
+    fuel = db["fuel"].find_one({"land_id": id, "_chain.valid_from": block})
+
+    if fuel is not None:
+        return FuelProduction.from_mongo(fuel)
+    return None
+
+
+# ------- Claim Event ------
+@strawberry.type
+class ClaimResources:
+    owner: HexValue
+    land_id: HexValue
+    time: HexValue
+    block_number: HexValue
+    building_counter: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            time=data["time"],
+            block_number=data["block_number"],
+            building_counter=data["building_counter"],
+            timestamp=data["timestamp"],
+        )
+
+# returns claim event for a given tokenId
+def get_claim_by_id(info, land_id: HexValue, skip: int = 0) -> List[ClaimResources]:
+    db = info.context["db"]
+
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    
+    query = db["claims"].find(filter).skip(skip).sort("updated_at", -1)
+
+    return [ClaimResources.from_mongo(t) for t in query]
+
+# returns claim events for a given land_id with timestamp of tx greater than time
+def get_claim_by_id_time(info, id: HexValue, time: datetime) -> Optional[ClaimResources]:
+    db = info.context["db"]
+    claims = db["claims"].find_one({"land_id": id, "_chain.valid_to": None, "timestamp": {"$gt": time}})
+
+    if claims is not None:
+        return ClaimResources.from_mongo(claims)
+    return None
+
+# returns claim events for a given land_id with block equals to block
+def get_claim_by_id_block(info, id: HexValue, block: HexValue) -> Optional[ClaimResources]:
+    db = info.context["db"]
+    claims = db["claims"].find_one({"land_id": id, "_chain.valid_from": block})
+
+    if claims is not None:
+        return ClaimResources.from_mongo(claims)
+    return None
+
+
+# ------- Repair Event ------
+@strawberry.type
+class RepairBuilding:
+    owner: HexValue
+    land_id: HexValue
+    time: HexValue
+    building_type_id: HexValue
+    building_uid: HexValue
+    pos_x: HexValue
+    pos_y: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            time=data["time"],
+            building_type_id=data["building_type_id"],
+            building_uid=data["building_uid"],
+            pos_x=data["pos_x"],
+            pos_y=data["pos_y"],
+            timestamp=data["timestamp"],
+        )
+
+# returns claim event for a given tokenId
+def get_repairs_by_id(info, id: HexValue) -> Optional[RepairBuilding]:
+    db = info.context["db"]
+    repairs = db["repairs"].find_one({"land_id": id, "_chain.valid_to": None})
+
+    if repairs is not None:
+        return RepairBuilding.from_mongo(repairs)
+    return None
+
+# ------- Moves Event ------
+@strawberry.type
+class MoveInfrastructure:
+    owner: HexValue
+    land_id: HexValue
+    time: HexValue
+    infra_type: HexValue
+    infra_type_id: HexValue
+    pos_x: HexValue
+    pos_y: HexValue
+    new_pos_x: HexValue
+    new_pos_y: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            time=data["time"],
+            infra_type=data["infra_type"],
+            infra_type_id=data["infra_type_id"],
+            pos_x=data["pos_x"],
+            pos_y=data["pos_y"],
+            new_pos_x=data["new_pos_x"],
+            new_pos_y=data["new_pos_y"],
+            timestamp=data["timestamp"],
+        )
+
+# returns move event for a given tokenId
+def get_moves_by_id(info, land_id: HexValue, skip: int = 0) -> List[MoveInfrastructure]:
+    db = info.context["db"]
+
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    
+    query = db["moves"].find(filter).skip(skip).sort("updated_at", -1)
+
+    return [MoveInfrastructure.from_mongo(t) for t in query]
+
+
+# ------- Reset Game Event ------
+@strawberry.type
+class ResetGame:
+    owner: HexValue
+    land_id: HexValue
+    time: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            time=data["time"],
+            timestamp=data["timestamp"],
+        )
+
+# returns move event for a given tokenId
+def get_resets_by_id(info, land_id: HexValue, limit: int = 10, skip: int = 0) -> List[ResetGame]:
+    db = info.context["db"]
+
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    
+    query = db["reset"].find(filter).skip(skip).limit(limit).sort("updated_at", -1)
+
+    return [ResetGame.from_mongo(t) for t in query]
+
+# ------- Reset Destroy Event ------
+@strawberry.type
+class DestroyInfrastructure:
+    owner: HexValue
+    land_id: HexValue
+    time: HexValue
+    building_type_id: HexValue
+    block_comp: HexValue
+    pos_x: HexValue
+    pos_y: HexValue
+    timestamp: datetime
+
+    @classmethod
+    def from_mongo(cls, data):
+        return cls(
+            owner=data["owner"],
+            land_id=data["land_id"],
+            time=data["time"],
+            building_type_id=data["building_type_id"],
+            block_comp=data["block_comp"],
+            pos_x=data["pos_x"],
+            pos_y=data["pos_y"],
+            timestamp=data["timestamp"],
+        )
+
+# returns move event for a given tokenId
+def get_destroy_by_id(info, land_id: HexValue, limit: int = 10, skip: int = 0) -> List[DestroyInfrastructure]:
+    db = info.context["db"]
+
+    filter = {"_chain.valid_to": None}    
+    if land_id is not None:
+        filter["land_id"] = land_id
+    
+    query = db["destroy"].find(filter).skip(skip).limit(limit).sort("updated_at", -1)
+
+    return [DestroyInfrastructure.from_mongo(t) for t in query]
+
+# ------- End Destroy Event ------
 
 @strawberry.type
 class Query:
     tokens: List[Token] = strawberry.field(resolver=get_tokens)
     token: Optional[Token] = strawberry.field(resolver=get_token_by_id)
     wasInit: Optional[GameInit] = strawberry.field(resolver=get_init_by_id)
+    # Harvest
+    harvest: List[HarvestResource] = strawberry.field(resolver=get_harvest_by_id)
+    harvestTime: Optional[HarvestResource] = strawberry.field(resolver=get_harvest_by_id_time)
+    harvestAll: List[HarvestResource] = strawberry.field(resolver=get_harvest_array)
+    # Build
+    build: List[Build] = strawberry.field(resolver=get_build_by_id)
+    buildTime: Optional[Build] = strawberry.field(resolver=get_build_by_id_time)
+    buildByBlock: List[Build] = strawberry.field(resolver=get_build_by_id_block)
+    # FuelProduction
+    fuel: List[FuelProduction] = strawberry.field(resolver=get_fuel_by_id)
+    fueldTime: Optional[FuelProduction] = strawberry.field(resolver=get_fuel_by_id_time)
+    fuelBlock: Optional[FuelProduction] = strawberry.field(resolver=get_fuel_by_id_block)
+    # Claim
+    claim: List[ClaimResources] = strawberry.field(resolver=get_claim_by_id)
+    claimTime: Optional[ClaimResources] = strawberry.field(resolver=get_claim_by_id_time)
+    claimBlock: Optional[ClaimResources] = strawberry.field(resolver=get_claim_by_id_block)
+    repair: Optional[RepairBuilding] = strawberry.field(resolver=get_repairs_by_id)
+    move: List[MoveInfrastructure] = strawberry.field(resolver=get_moves_by_id)
+    reset: List[ResetGame] = strawberry.field(resolver=get_resets_by_id)
+    destroy: List[DestroyInfrastructure] = strawberry.field(resolver=get_destroy_by_id)
 
 class IndexerGraphQLView(GraphQLView):
     def __init__(self, db, **kwargs):
@@ -137,6 +537,7 @@ class IndexerGraphQLView(GraphQLView):
 
 
 async def run_graphql_api(mongo_url=None):
+    # 27018 in local, 27017 en prod
     if mongo_url is None:
         mongo_url = "mongodb://apibara:apibara@localhost:27017"
 
@@ -148,10 +549,8 @@ async def run_graphql_api(mongo_url=None):
     view = IndexerGraphQLView(db, schema=schema)
 
     app = web.Application()
-    # app.router.add_routes(["/graphql", view])
-    app.router.add_post("/graphql", view)
-    # app.router.add_route("*", "/graphql", view)
 
+    app.router.add_post("/graphql", view)
     cors = aiohttp_cors.setup(app, defaults={
     "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
