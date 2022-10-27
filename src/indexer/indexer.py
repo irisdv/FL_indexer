@@ -57,6 +57,7 @@ async def handle_events(info: Info, block_events: NewEvents):
 
 async def handle_block(info: Info, block: NewBlock):
     # Store the block information in the database.
+    print(f"Block: {block.new_head.number}")
     block = {
         "number": block.new_head.number,
         "hash": block.new_head.hash,
