@@ -1,6 +1,6 @@
 from typing import List, NamedTuple
-from apibara import IndexerRunner, Info, NewBlock, NewEvents
-from apibara.model import EventFilter, BlockHeader, StarkNetEvent
+from apibara import Info
+from apibara.model import BlockHeader, StarkNetEvent
 from starknet_py.contract import FunctionCallSerializer, identifier_manager_from_abi
 from indexer.utils import encode_int_as_bytes, uint256_abi
 
@@ -54,3 +54,14 @@ async def handle_repair_events(info: Info, block: BlockHeader, ev: StarkNetEvent
     ]
     await info.storage.insert_many("repairs", repair_docs)
     print("    Repairs stored.")
+
+    # update cabin in buildings 
+    for tr in repairs:
+        await info.storage.find_one_and_update(
+            "buildings",
+            {
+                "building_uid": encode_int_as_bytes(tr["event"].building_uid), 
+                "land_id": encode_int_as_bytes(tr["event"].land_id)
+            },
+            {"$set": {"decay": 0, "updated_at": block_time}},
+        )

@@ -44,6 +44,8 @@ async def start(server_url, mongo_url, restart):
 @async_command
 async def graphql(mongo_url):
     """Start the GraphQL server."""
+    if mongo_url is None:
+        mongo_url = "mongodb://apibara:apibara@localhost:27018"
     await run_graphql_api(
         mongo_url=mongo_url,
     )

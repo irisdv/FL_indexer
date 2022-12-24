@@ -1,6 +1,6 @@
 from typing import List, NamedTuple
-from apibara import IndexerRunner, Info, NewBlock, NewEvents
-from apibara.model import EventFilter, BlockHeader, StarkNetEvent
+from apibara import Info
+from apibara.model import BlockHeader, StarkNetEvent
 from starknet_py.contract import FunctionCallSerializer, identifier_manager_from_abi
 from indexer.utils import encode_int_as_bytes, uint256_abi
 

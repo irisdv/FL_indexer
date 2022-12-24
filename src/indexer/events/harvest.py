@@ -1,6 +1,6 @@
 from typing import List, NamedTuple
-from apibara import IndexerRunner, Info, NewBlock, NewEvents
-from apibara.model import EventFilter, BlockHeader, StarkNetEvent
+from apibara import Info
+from apibara.model import BlockHeader, StarkNetEvent
 from starknet_py.contract import FunctionCallSerializer, identifier_manager_from_abi
 from indexer.utils import encode_int_as_bytes, uint256_abi
 
@@ -30,7 +30,6 @@ def decode_harvest_event(data: List[bytes]) -> NamedTuple:
     return harvest_decoder.to_python(data)
 
 async def handle_harvest_events(info: Info, block: BlockHeader, ev: StarkNetEvent):
-    print("Harvest event")
     block_time = block.timestamp
     harvests = [
         {
@@ -56,3 +55,18 @@ async def handle_harvest_events(info: Info, block: BlockHeader, ev: StarkNetEven
     ]
     await info.storage.insert_many("harvest", harvest_docs)
     print("    Harvests stored.")
+
+    # Update map block
+    for tr in harvests:
+        land = await info.storage.find_one("lands", {"land_id": encode_int_as_bytes(tr["event"].land_id)})
+        if land is not None:
+            land["map"][tr["event"].pos_y][tr["event"].pos_x] = tr["event"].block_comp
+            print('map block updated', land["map"][tr["event"].pos_y][tr["event"].pos_x])
+            await info.storage.find_one_and_update(
+                "lands",
+                {"land_id": encode_int_as_bytes(tr["event"].land_id)},
+                {"$set": { 
+                    "map": land["map"], 
+                    "updated_at": block_time 
+                }}
+            )
