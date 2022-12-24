@@ -25,21 +25,20 @@ build_decoder = FunctionCallSerializer(
     identifier_manager=identifier_manager_from_abi([build_abi, uint256_abi]),
 )
 
-def decode_harvest_event(data: List[bytes]) -> NamedTuple:
+def decode_build_event(data: List[bytes]) -> NamedTuple:
     data = [int.from_bytes(b, "big") for b in data]
     return build_decoder.to_python(data)
 
 async def handle_build_events(info: Info, block: BlockHeader, ev: StarkNetEvent):
     block_time = block.timestamp
-    event = decode_harvest_event(ev.data),
-    print("Build event", event)
+    print("Build event")
     builds = [
         {
-            "event": decode_harvest_event(ev.data),
+            "event": decode_build_event(ev.data),
             "transaction_hash": ev.transaction_hash,
         }
     ]
-    print("    Build decoded.", builds)
+    print("    Build decoded.")
 
     build_docs = [
         {
@@ -86,10 +85,7 @@ async def handle_build_events(info: Info, block: BlockHeader, ev: StarkNetEvent)
     for tr in builds:
         land = await info.storage.find_one("lands", {"land_id": encode_int_as_bytes(tr["event"].land_id)})
         if land is not None:
-            print('land', land)
-            print('block', land['map'][tr["event"].pos_y][tr["event"].pos_x])
             land["map"][tr["event"].pos_y][tr["event"].pos_x] = tr["event"].block_comp
-            print('map block updated', land["map"][tr["event"].pos_y][tr["event"].pos_x])
             await info.storage.find_one_and_update(
                 "lands",
                 {"land_id": encode_int_as_bytes(tr["event"].land_id)},

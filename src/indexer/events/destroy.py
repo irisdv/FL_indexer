@@ -71,7 +71,6 @@ async def handle_destroy_events(info: Info, block: BlockHeader, ev: StarkNetEven
         land = await info.storage.find_one("lands", {"land_id": encode_int_as_bytes(de["event"].land_id)})
         if land is not None:
             land["map"][de["event"].pos_y][de["event"].pos_x] = 0
-            print('map block updated', land["map"][de["event"].pos_y][de["event"].pos_x])
             await info.storage.find_one_and_update(
                 "lands",
                 {"land_id": encode_int_as_bytes(de["event"].land_id)},

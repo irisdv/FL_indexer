@@ -24,7 +24,7 @@ repair_decoder = FunctionCallSerializer(
     identifier_manager=identifier_manager_from_abi([repair_abi, uint256_abi]),
 )
 
-def decode_harvest_event(data: List[bytes]) -> NamedTuple:
+def decode_repair_event(data: List[bytes]) -> NamedTuple:
     data = [int.from_bytes(b, "big") for b in data]
     return repair_decoder.to_python(data)
 
@@ -33,7 +33,7 @@ async def handle_repair_events(info: Info, block: BlockHeader, ev: StarkNetEvent
     block_time = block.timestamp
     repairs = [
         {
-            "event": decode_harvest_event(ev.data),
+            "event": decode_repair_event(ev.data),
             "transaction_hash": ev.transaction_hash,
         }
     ]

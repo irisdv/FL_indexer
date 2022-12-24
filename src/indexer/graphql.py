@@ -1,6 +1,8 @@
 import asyncio
 from datetime import datetime
 from typing import List, NewType, Optional
+from decimal import Decimal
+from indexer.utils import encode_int_as_bytes
 
 import strawberry
 from aiohttp import web
@@ -19,7 +21,6 @@ def parse_hex(value):
 
 
 def serialize_hex(token_id):
-    print('serialize')
     print(token_id)
     return "0x" + token_id.hex()
 
@@ -99,6 +100,7 @@ def get_tokens(
 class GameInit:
     owner: HexValue
     land_id: HexValue
+    time: HexValue
     timestamp: datetime
 
     @classmethod
@@ -106,17 +108,17 @@ class GameInit:
         return cls(
             owner=data["owner"],
             land_id=data["land_id"],
+            time=data["time"],
             timestamp=data["timestamp"],
         )
 
 # returns event for a given tokenId
 def get_init_by_id(info, land_id: HexValue) -> Optional[GameInit]:
     db = info.context["db"]
-    init = db["inits"].find_one({"land_id": land_id, "_chain.valid_to": None})
+    query = db["inits"].find_one({"land_id": land_id, "_chain.valid_to": None})
 
-    if init is not None:
-        return GameInit.from_mongo(init)
-    return None
+    if query is not None:
+        return GameInit.from_mongo(query)
 
 # ------- Harvest Event ------
 
@@ -133,7 +135,6 @@ class HarvestResource:
 
     @classmethod
     def from_mongo(cls, data):
-        print(data)
         return cls(
             owner=data["owner"],
             land_id=data["land_id"],
@@ -520,7 +521,7 @@ def get_destroy_by_id(info, land_id: HexValue, limit: int = 10, skip: int = 0) -
 
 @strawberry.type
 class Land:
-    map: List[List[int]]
+    map: List[List[Decimal]]
     land_id: HexValue
     time: HexValue
     timestamp: datetime

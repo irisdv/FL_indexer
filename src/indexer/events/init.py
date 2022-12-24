@@ -27,16 +27,13 @@ def decode_new_game_event(data: List[bytes]) -> NamedTuple:
 async def handle_init_events(info: Info, block: BlockHeader, ev: StarkNetEvent):
     print("NewGame event")
     block_time = block.timestamp
-    # event = decode_new_game_event(ev.data),
-    # print('event init ----------- ', event)
-
     inits = [
         {
-            "event": decode_reset_event(ev.data),
+            "event": decode_new_game_event(ev.data),
             "transaction_hash": ev.transaction_hash,
         }
     ]
-    print("    Inits decoded.", inits)
+    print("    Inits decoded.")
 
     init_docs = [
         {
@@ -54,36 +51,36 @@ async def handle_init_events(info: Info, block: BlockHeader, ev: StarkNetEvent):
 
     cabins = [
         {
-            "owner": encode_int_as_bytes(tr["event"].owner),
-            "land_id": encode_int_as_bytes(tr["event"].land_id),
-            "time": encode_int_as_bytes(tr["event"].time),
+            "owner": encode_int_as_bytes(ca["event"].owner),
+            "land_id": encode_int_as_bytes(ca["event"].land_id),
+            "time": encode_int_as_bytes(ca["event"].time),
             "building_type_id": encode_int_as_bytes(1),
             "building_uid": encode_int_as_bytes(1),
             "block_comp": encode_int_as_bytes(20100011199),
             "pos_x": encode_int_as_bytes(20),
             "pos_y": encode_int_as_bytes(8),
-            "transaction_hash": tr["transaction_hash"],
+            "transaction_hash": ca["transaction_hash"],
             "timestamp": block_time,
             "status": "built",
             "decay": 100,
             "active_cycles": 0,
             "incoming_cycles": 0,
-            "last_fuel": tr["event"].time,
+            "last_fuel": ca["event"].time,
             "updated_at": block_time,
         }
-        for tr in inits
+        for ca in inits
     ]
     await info.storage.insert_many("buildings", cabins)
     print("    Cabin stored.")    
 
     # create map
-    for tr in inits:
+    for ini in inits:
         map = create_map_array()
         await info.storage.insert_one("lands", {
             "map": map, 
-            "land_id": encode_int_as_bytes(tr["event"].land_id), 
-            "transaction_hash": tr["transaction_hash"],
-            "time": encode_int_as_bytes(tr["event"].time),
+            "land_id": encode_int_as_bytes(ini["event"].land_id), 
+            "transaction_hash": ini["transaction_hash"],
+            "time": encode_int_as_bytes(ini["event"].time),
             "timestamp": block_time, 
             "updated_at": block_time,
         })
@@ -124,7 +121,7 @@ async def handle_reset_events(info: Info, block: BlockHeader, ev: StarkNetEvent)
     reset_docs = [
         {
             "owner": encode_int_as_bytes(tr["event"].owner),
-            "time": encode_int_as_bytes(tr["event"].time),
+            "time": encode_int_as_bytes(block.number),
             "land_id": encode_int_as_bytes(tr["event"].land_id),
             "transaction_hash": tr["transaction_hash"],
             "timestamp": block_time,
@@ -137,30 +134,46 @@ async def handle_reset_events(info: Info, block: BlockHeader, ev: StarkNetEvent)
     for tr in resets:
         await info.storage.delete_many(
             "buildings",
-            {
-                "status": "built",
-                "building_uid": {"$ne": encode_int_as_bytes(1)},
-                "land_id": encode_int_as_bytes(tr["event"].land_id),
-            },
+            { "land_id": encode_int_as_bytes(tr["event"].land_id)},
         )
 
         # Update decay cabin
-        await info.storage.find_one_and_update(
+        await info.storage.insert_one(
             "buildings",
             {
-                "building_uid": encode_int_as_bytes(1),
+                "owner": encode_int_as_bytes(tr["event"].owner),
                 "land_id": encode_int_as_bytes(tr["event"].land_id),
+                "time": encode_int_as_bytes(block.number),
+                "building_type_id": encode_int_as_bytes(1),
+                "building_uid": encode_int_as_bytes(1),
+                "block_comp": encode_int_as_bytes(20100011199),
+                "pos_x": encode_int_as_bytes(20),
+                "pos_y": encode_int_as_bytes(8),
+                "transaction_hash": tr["transaction_hash"],
+                "timestamp": block_time,
+                "status": "built",
+                "decay": 100,
+                "active_cycles": 0,
+                "incoming_cycles": 0,
+                "last_fuel": block.number,
+                "updated_at": block_time,
             },
-            {"$set": { "decay": 100, "updated_at": block_time }}
         )
 
         # Reset map
         map = create_map_array()
-        await info.storage.find_one_and_update(
+        await info.storage.delete_one(
             "lands",
-            {"land_id": encode_int_as_bytes(tr["event"].land_id)},
-            {"$set": { 
+            {"land_id": encode_int_as_bytes(tr["event"].land_id)}
+        )
+        await info.storage.insert_one(
+            "lands",
+            {
                 "map": map, 
-                "updated_at": block_time 
-            }}
+                "land_id": encode_int_as_bytes(tr["event"].land_id), 
+                "transaction_hash": tr["transaction_hash"],
+                "time": encode_int_as_bytes(block.number),
+                "timestamp": block_time, 
+                "updated_at": block_time,
+            },
         )

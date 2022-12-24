@@ -89,7 +89,7 @@ async def handle_claim_events(info: Info, block: BlockHeader, ev: StarkNetEvent)
                         {
                             "active_cycles": active_cycles,
                             "incoming_cycles": incoming_cycles,
-                            "last_fuel": building["event"].time,
+                            "last_fuel": tr["event"].time,
                         }
                     }
                 )
