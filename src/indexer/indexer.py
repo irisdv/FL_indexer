@@ -1,14 +1,9 @@
 import asyncio
 import sys
-from argparse import ArgumentParser
-from typing import List, NamedTuple
-from datetime import datetime
 
 from apibara import IndexerRunner, Info, NewBlock, NewEvents
 from apibara.indexer.runner import IndexerRunnerConfiguration
-from apibara.model import EventFilter, BlockHeader, StarkNetEvent
-from pymongo import MongoClient
-from starknet_py.contract import FunctionCallSerializer, identifier_manager_from_abi
+from apibara.model import EventFilter
 
 from indexer.events.transfers import handle_transfer_events
 from indexer.events.init import handle_init_events, handle_reset_events
@@ -20,7 +15,7 @@ from indexer.events.move import handle_move_events
 from indexer.events.fuel import handle_fuel_events
 from indexer.events.claim import handle_claim_events
 
-indexer_id = "indexer-transfer"
+indexer_id = "indexer-all"
 map_address = "0x052c936c5624517d671a6378ab0ede31e4c6d4584357ebb432bb1313af93599c"
 frenslands_address = "0x0274f30014f7456d36b82728eb655f23dfe9ef0b7e0c6ca827052ab2d01a5d65"
 
