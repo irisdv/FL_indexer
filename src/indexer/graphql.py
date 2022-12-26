@@ -120,6 +120,15 @@ def get_init_by_id(info, land_id: HexValue) -> Optional[GameInit]:
     if query is not None:
         return GameInit.from_mongo(query)
 
+def was_init(info, land_id: HexValue) -> bool:
+    db = info.context["db"]
+    query = db["inits"].find_one({"land_id": land_id, "_chain.valid_to": None})
+    queryReset = db["resets"].find_one({"land_id": land_id, "_chain.valid_to": None})
+
+    if query is not None or queryReset is not None:
+        return True
+    return False
+
 # ------- Harvest Event ------
 
 @strawberry.type
@@ -561,8 +570,7 @@ def get_map(info, land_id: Optional[HexValue], skip: int = 0) -> List[Land]:
 class Query:
     tokens: List[Token] = strawberry.field(resolver=get_tokens)
     token: Optional[Token] = strawberry.field(resolver=get_token_by_id)
-    # * 
-    wasInit: Optional[GameInit] = strawberry.field(resolver=get_init_by_id)
+    wasInit: bool = strawberry.field(resolver=was_init)
     getLand: List[Land] = strawberry.field(resolver=get_map)
     getAllBuildings: List[Build] = strawberry.field(resolver=get_all_buildings)
     getBuildingsState: List[Build] = strawberry.field(resolver=get_buildings_state)
