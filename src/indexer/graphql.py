@@ -478,7 +478,14 @@ def get_resets_by_id(info, land_id: HexValue, limit: int = 10, skip: int = 0) ->
     if land_id is not None:
         filter["land_id"] = land_id
     
-    query = db["reset"].find(filter).skip(skip).limit(limit).sort("updated_at", -1)
+    query = db["resets"].find(filter).skip(skip).limit(limit).sort("updated_at", -1)
+
+    return [ResetGame.from_mongo(t) for t in query]
+
+def get_resets_before(info, land_id: HexValue, time: datetime) -> List[ResetGame]:
+    db = info.context["db"]
+
+    query = db["resets"].find({"land_id": land_id, "_chain.valid_to": None, "timestamp": {"$lt": time}})
 
     return [ResetGame.from_mongo(t) for t in query]
 
@@ -576,6 +583,7 @@ class Query:
     repair: List[RepairBuilding] = strawberry.field(resolver=get_repairs_by_id)
     move: List[MoveInfrastructure] = strawberry.field(resolver=get_moves_by_id)
     reset: List[ResetGame] = strawberry.field(resolver=get_resets_by_id)
+    resetsBefore: List[ResetGame] = strawberry.field(resolver=get_resets_before)
     destroy: List[DestroyInfrastructure] = strawberry.field(resolver=get_destroy_by_id)
 
 class IndexerGraphQLView(GraphQLView):
