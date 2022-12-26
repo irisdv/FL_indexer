@@ -68,15 +68,9 @@ async def handle_fuel_events(info: Info, block: BlockHeader, ev: StarkNetEvent):
             incoming_cycles = building["incoming_cycles"]
             last_fuel = building["last_fuel"]
 
-            print("building", building)
-            print("active_cycles", active_cycles)
-            print("incoming_cycles", incoming_cycles)
-            print("nb_blocks", de["event"].nb_blocks)
-
             if incoming_cycles == 0:
                 incoming_cycles = de["event"].nb_blocks
             else:
-                # todo check que bon calcul
                 passed_blocks = de["event"].time - last_fuel
                 print("passed_blocks", passed_blocks)
                 if incoming_cycles <= passed_blocks:
@@ -85,10 +79,6 @@ async def handle_fuel_events(info: Info, block: BlockHeader, ev: StarkNetEvent):
                 else:
                     active_cycles += passed_blocks
                     incoming_cycles = incoming_cycles - passed_blocks + de["event"].nb_blocks
-
-            print("active_cycles", active_cycles)
-            print("incoming_cycles", incoming_cycles)
-            print("nb_blocks", de["event"].nb_blocks)
             
             await info.storage.find_one_and_update(
                 "buildings",

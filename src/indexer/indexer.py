@@ -15,7 +15,7 @@ from indexer.events.move import handle_move_events
 from indexer.events.fuel import handle_fuel_events
 from indexer.events.claim import handle_claim_events
 
-indexer_id = "indexer-all-2"
+indexer_id = "indexer-all3"
 map_address = "0x052c936c5624517d671a6378ab0ede31e4c6d4584357ebb432bb1313af93599c"
 frenslands_address = "0x0274f30014f7456d36b82728eb655f23dfe9ef0b7e0c6ca827052ab2d01a5d65"
 

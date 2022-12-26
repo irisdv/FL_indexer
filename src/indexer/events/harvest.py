@@ -60,7 +60,7 @@ async def handle_harvest_events(info: Info, block: BlockHeader, ev: StarkNetEven
     for tr in harvests:
         land = await info.storage.find_one("lands", {"land_id": encode_int_as_bytes(tr["event"].land_id)})
         if land is not None:
-            land["map"][tr["event"].pos_y][tr["event"].pos_x] = tr["event"].block_comp
+            land["map"][tr["event"].pos_y - 1][tr["event"].pos_x - 1] = tr["event"].block_comp
             await info.storage.find_one_and_update(
                 "lands",
                 {"land_id": encode_int_as_bytes(tr["event"].land_id)},

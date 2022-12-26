@@ -53,43 +53,38 @@ async def handle_claim_events(info: Info, block: BlockHeader, ev: StarkNetEvent)
 
     # update buildings cycles
     for tr in claims:
-        land_id = encode_int_as_bytes(tr["event"].land_id),
-        buildings = await info.storage.find("buildings", {"land_id": land_id,  "status": "built"})
+        land_id = encode_int_as_bytes(tr["event"].land_id)
+        buildings = await info.storage.find("buildings", {"land_id": land_id})
+        results_list = list(buildings)
 
-        if buildings is not None:
-            for building in buildings:
+        if len(results_list) > 0:
+            for building in results_list:
                 active_cycles = building["active_cycles"]
                 incoming_cycles = building["incoming_cycles"]
                 last_fuel = building["last_fuel"]
 
-                print("active_cycles", active_cycles)
-                print("incoming_cycles", incoming_cycles)
-                print("nb_blocks", tr["event"].nb_blocks)
-
                 if incoming_cycles == 0:
                     active_cycles = 0
                 else:
-                    passed_blocks = tr["event"].time - last_fuel
-                    print("passed_blocks", passed_blocks)
+                    passed_blocks = tr["event"].block_number - last_fuel
                     if incoming_cycles <= passed_blocks:
                         active_cycles = 0
                         incoming_cycles = 0
                     else:
                         active_cycles = 0
                         incoming_cycles = incoming_cycles - passed_blocks
-
                 
                 await info.storage.find_one_and_update(
                     "buildings",
                     {
-                        "building_uid": encode_int_as_bytes(building["event"].building_uid),
-                        "land_id": encode_int_as_bytes(building["event"].land_id),
+                        "building_uid": building["building_uid"],
+                        "land_id": building["land_id"],
                     },
                     {"$set": 
                         {
                             "active_cycles": active_cycles,
                             "incoming_cycles": incoming_cycles,
-                            "last_fuel": tr["event"].time,
+                            "last_fuel": tr["event"].block_number,
                         }
                     }
                 )

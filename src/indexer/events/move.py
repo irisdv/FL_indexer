@@ -80,8 +80,8 @@ async def handle_move_events(info: Info, block: BlockHeader, ev: StarkNetEvent):
         land = await info.storage.find_one("lands", {"land_id": encode_int_as_bytes(tr["event"].land_id)})
         if land is not None:
             new_block = land["map"][tr["event"].pos_y][tr["event"].pos_x]
-            land["map"][tr["event"].new_pos_y][tr["event"].new_pos_x] = new_block
-            land["map"][tr["event"].pos_y][tr["event"].pos_x] = 0
+            land["map"][tr["event"].new_pos_y - 1][tr["event"].new_pos_x - 1] = new_block
+            land["map"][tr["event"].pos_y - 1][tr["event"].pos_x - 1] = 0
             await info.storage.find_one_and_update(
                 "lands",
                 {"land_id": encode_int_as_bytes(tr["event"].land_id)},
